@@ -1,0 +1,432 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Habit Tracker API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: habits
+    description: Habit management
+  - name: completions
+    description: Habit completion tracking
+  - name: stats
+    description: Statistics and leveling
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /habits:
+    get:
+      operationId: listHabits
+      tags: [habits]
+      summary: List all habits
+      responses:
+        "200":
+          description: List of habits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Habit"
+    post:
+      operationId: createHabit
+      tags: [habits]
+      summary: Create a new habit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHabitBody"
+      responses:
+        "201":
+          description: Created habit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Habit"
+
+  /habits/{id}:
+    get:
+      operationId: getHabit
+      tags: [habits]
+      summary: Get a single habit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Habit detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Habit"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateHabit
+      tags: [habits]
+      summary: Update a habit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHabitBody"
+      responses:
+        "200":
+          description: Updated habit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Habit"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteHabit
+      tags: [habits]
+      summary: Delete a habit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /habits/{id}/archive:
+    patch:
+      operationId: toggleArchiveHabit
+      tags: [habits]
+      summary: Toggle archive status of a habit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated habit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Habit"
+        "404":
+          description: Not found
+
+  /completions:
+    get:
+      operationId: listCompletions
+      tags: [completions]
+      summary: List completions for a date range
+      parameters:
+        - name: habitId
+          in: query
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: List of completions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Completion"
+    post:
+      operationId: toggleCompletion
+      tags: [completions]
+      summary: Toggle a habit completion for a specific date
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToggleCompletionBody"
+      responses:
+        "200":
+          description: Completion toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToggleCompletionResponse"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [stats]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /stats/streaks:
+    get:
+      operationId: getStreaks
+      tags: [stats]
+      summary: Get current and best streaks per habit
+      responses:
+        "200":
+          description: Streak data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HabitStreak"
+
+  /stats/weekly-activity:
+    get:
+      operationId: getWeeklyActivity
+      tags: [stats]
+      summary: Get completions grouped by day of week for the last 4 weeks
+      responses:
+        "200":
+          description: Weekly activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WeeklyActivity"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Habit:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        icon:
+          type: string
+        color:
+          type: string
+        frequency:
+          type: string
+          enum: [daily, weekdays, weekends, custom]
+        customDays:
+          type: ["string", "null"]
+        archived:
+          type: boolean
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - icon
+        - color
+        - frequency
+        - archived
+        - sortOrder
+        - createdAt
+
+    CreateHabitBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        icon:
+          type: string
+        color:
+          type: string
+        frequency:
+          type: string
+          enum: [daily, weekdays, weekends, custom]
+        customDays:
+          type: ["string", "null"]
+      required:
+        - name
+        - icon
+        - color
+        - frequency
+
+    UpdateHabitBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        icon:
+          type: string
+        color:
+          type: string
+        frequency:
+          type: string
+          enum: [daily, weekdays, weekends, custom]
+        customDays:
+          type: ["string", "null"]
+        sortOrder:
+          type: integer
+
+    Completion:
+      type: object
+      properties:
+        id:
+          type: integer
+        habitId:
+          type: integer
+        completedDate:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - habitId
+        - completedDate
+        - createdAt
+
+    ToggleCompletionBody:
+      type: object
+      properties:
+        habitId:
+          type: integer
+        completedDate:
+          type: string
+          format: date
+      required:
+        - habitId
+        - completedDate
+
+    ToggleCompletionResponse:
+      type: object
+      properties:
+        completed:
+          type: boolean
+        completion:
+          $ref: "#/components/schemas/Completion"
+      required:
+        - completed
+
+    DashboardStats:
+      type: object
+      properties:
+        totalHabits:
+          type: integer
+        activeHabits:
+          type: integer
+        completionsToday:
+          type: integer
+        completionsThisWeek:
+          type: integer
+        overallCompletionRate:
+          type: number
+          format: float
+        currentLevel:
+          type: integer
+        totalXp:
+          type: integer
+        xpToNextLevel:
+          type: integer
+        longestStreak:
+          type: integer
+      required:
+        - totalHabits
+        - activeHabits
+        - completionsToday
+        - completionsThisWeek
+        - overallCompletionRate
+        - currentLevel
+        - totalXp
+        - xpToNextLevel
+        - longestStreak
+
+    HabitStreak:
+      type: object
+      properties:
+        habitId:
+          type: integer
+        habitName:
+          type: string
+        habitColor:
+          type: string
+        habitIcon:
+          type: string
+        currentStreak:
+          type: integer
+        bestStreak:
+          type: integer
+      required:
+        - habitId
+        - habitName
+        - habitColor
+        - habitIcon
+        - currentStreak
+        - bestStreak
+
+    WeeklyActivity:
+      type: object
+      properties:
+        dayOfWeek:
+          type: string
+        count:
+          type: integer
+      required:
+        - dayOfWeek
+        - count
